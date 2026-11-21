@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#081324">
+<title>가위바위보 룰렛</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:clamp(14px,3.2vw,24px);padding:26px 16px 34px;text-align:center;color:#eaf4ff;overflow-x:hidden;
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,-apple-system,sans-serif;
+    background:radial-gradient(110% 80% at 50% 0%,#1d3f6e 0%,#0f2544 42%,#081324 72%,#04080f 100%);
+  }
+  h1{margin:0;font-size:clamp(21px,5.6vw,32px);font-weight:800;letter-spacing:-.5px;
+     background:linear-gradient(180deg,#ffffff,#9fd2ff);-webkit-background-clip:text;background-clip:text;color:transparent;
+     filter:drop-shadow(0 3px 16px rgba(90,170,255,.45))}
+  .sub{margin:6px 0 0;font-size:clamp(12.5px,3.3vw,14.5px);color:#a9c3de}
+  .pick{display:flex;gap:8px;margin:0;justify-content:center;flex-wrap:wrap}
+  .pick button{
+    appearance:none;cursor:pointer;font-family:inherit;font-size:clamp(14px,3.8vw,16px);font-weight:700;
+    color:#cfe4ff;background:rgba(255,255,255,.07);border:1px solid rgba(140,190,255,.28);
+    padding:9px 16px;border-radius:999px;transition:.18s
+  }
+  .pick button[aria-pressed="true"]{background:linear-gradient(180deg,#4fa8ff,#2b74d6);color:#fff;border-color:transparent;
+    box-shadow:0 6px 18px rgba(60,140,255,.45)}
+  .wheel-wrap{position:relative;width:min(78vw,300px);aspect-ratio:1;display:grid;place-items:center}
+  .wheel-wrap::after{
+    content:"";position:absolute;inset:-14px;border-radius:50%;pointer-events:none;
+    box-shadow:0 0 0 2px rgba(120,180,255,.20),0 0 46px rgba(70,140,255,.38)
+  }
+  .pointer{
+    position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:0;height:0;z-index:3;
+    border-left:13px solid transparent;border-right:13px solid transparent;border-top:24px solid #ffd54a;
+    filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))
+  }
+  .wheel{
+    position:relative;width:100%;height:100%;border-radius:50%;
+    background:conic-gradient(from -60deg,#37b6ff 0deg 120deg,#ff7aa8 120deg 240deg,#7ee787 240deg 360deg);
+    box-shadow:inset 0 0 0 8px rgba(8,19,36,.85),inset 0 0 0 10px rgba(255,255,255,.16),0 14px 40px rgba(0,0,0,.55);
+    transition:transform 3.4s cubic-bezier(.16,.86,.12,1);will-change:transform
+  }
+  .wheel .face{
+    position:absolute;width:clamp(58px,17vw,72px);height:clamp(58px,17vw,72px);
+    transform:translate(-50%,-50%);display:grid;place-items:center;
+    font-size:clamp(30px,9vw,40px);filter:drop-shadow(0 3px 6px rgba(0,0,0,.45))
+  }
+  .f0{top:20%;left:50%}
+  .f1{top:65%;left:75.98%}
+  .f2{top:65%;left:24.02%}
+  .hub{
+    position:absolute;top:50%;left:50%;width:22%;height:22%;transform:translate(-50%,-50%);
+    border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff,#b9cbe0 55%,#5f7590);
+    box-shadow:0 4px 12px rgba(0,0,0,.5);display:grid;place-items:center;font-size:11px;color:#42556e;font-weight:800
+  }
+  .result{
+    display:flex;flex-direction:column;align-items:center;gap:6px;min-height:clamp(74px,19vw,96px);justify-content:center
+  }
+  .result .big{font-size:clamp(28px,8.5vw,44px);font-weight:900;letter-spacing:-1px;line-height:1.15;
+    transition:transform .25s cubic-bezier(.2,1.5,.4,1)}
+  .result .big.show{animation:pop .45s cubic-bezier(.2,1.5,.4,1)}
+  @keyframes pop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+  .result .note{font-size:clamp(12.5px,3.4vw,15px);color:#a9c3de;font-weight:600;min-height:20px}
+  .win{color:#7ee787}.lose{color:#ff8fa3}.tie{color:#ffd54a}
+  button.spin{
+    appearance:none;border:0;cursor:pointer;font-family:inherit;font-weight:900;
+    font-size:clamp(16px,4.5vw,19px);color:#04203c;letter-spacing:-.2px;
+    padding:clamp(14px,3.8vw,17px) clamp(34px,10vw,56px);border-radius:999px;min-width:min(76vw,250px);
+    background:linear-gradient(180deg,#b8e4ff,#4fa8ff);
+    box-shadow:0 10px 0 #1a5fae,0 16px 32px rgba(0,0,0,.45);
+    transition:transform .12s,box-shadow .12s,filter .2s
+  }
+  button.spin:hover{filter:brightness(1.05)}
+  button.spin:active:not(:disabled){transform:translateY(6px);box-shadow:0 4px 0 #1a5fae,0 8px 16px rgba(0,0,0,.45)}
+  button.spin:disabled{opacity:.6;cursor:default;box-shadow:0 10px 0 #1a5fae}
+</style>
+</head>
+<body>
+  <h1>✌️ 가위바위보 룰렛 ✊</h1>
+  <p class="sub">룰렛을 돌려 오늘의 손을 뽑아 보세요</p>
+
+  <div class="pick" id="pick" role="group" aria-label="내 선택">
+    <button type="button" data-hand="가위" aria-pressed="false">✌️ 가위</button>
+    <button type="button" data-hand="바위" aria-pressed="false">✊ 바위</button>
+    <button type="button" data-hand="보" aria-pressed="false">✋ 보</button>
+  </div>
+
+  <div class="wheel-wrap">
+    <div class="pointer" aria-hidden="true"></div>
+    <div class="wheel" id="wheel">
+      <div class="face f0">✌️</div>
+      <div class="face f1">✊</div>
+      <div class="face f2">✋</div>
+      <div class="hub">RPS</div>
+    </div>
+  </div>
+
+  <div class="result" aria-live="polite">
+    <div class="big" id="big">?</div>
+    <div class="note" id="note">돌리기를 눌러 주세요</div>
+  </div>
+
+  <button class="spin" id="spin" type="button">돌리기</button>
+
+<script>
+(function(){
+  var HANDS = ['가위','바위','보'];
+  var EMOJI = {'가위':'✌️','바위':'✊','보':'✋'};
+  var wheel = document.getElementById('wheel');
+  var btn = document.getElementById('spin');
+  var big = document.getElementById('big');
+  var note = document.getElementById('note');
+  var pickBox = document.getElementById('pick');
+
+  var rotation = 0;
+  var spinning = false;
+  var myHand = null;
+  var round = 0;
+
+  pickBox.addEventListener('click', function(e){
+    var b = e.target.closest('button[data-hand]');
+    if(!b || spinning) return;
+    var hand = b.getAttribute('data-hand');
+    myHand = (myHand === hand) ? null : hand;
+    Array.prototype.forEach.call(pickBox.querySelectorAll('button'), function(x){
+      x.setAttribute('aria-pressed', String(x.getAttribute('data-hand') === myHand));
+    });
+    if(!myHand && !big.classList.contains('keep')) note.textContent = '내 선택을 풀었어요';
+  });
+
+  function judge(mine, cpu){
+    if(mine === cpu) return {text:'무승부예요', cls:'tie'};
+    var win = (mine === '가위' && cpu === '보') || (mine === '바위' && cpu === '가위') || (mine === '보' && cpu === '바위');
+    return win ? {text:'내가 이겼어요! 🎉', cls:'win'} : {text:'내가 졌어요… 😢', cls:'lose'};
+  }
+
+  function spin(){
+    if(spinning) return;
+    spinning = true;
+    btn.disabled = true;
+    big.className = 'big';
+    big.textContent = '…';
+    note.textContent = '룰렛이 도는 중…';
+
+    var idx = Math.floor(Math.random()*3);
+    var segAngle = idx * 120;                  // sector centre measured clockwise from top
+    var target = 360*6 + (360 - segAngle);      // bring that sector under the top pointer
+    rotation += target;
+    wheel.style.transform = 'rotate(' + rotation + 'deg)';
+
+    setTimeout(function(){
+      var cpu = HANDS[idx];
+      spinning = false;
+      btn.disabled = false;
+      round++;
+      btn.textContent = '다시 돌리기';
+      big.textContent = EMOJI[cpu] + ' ' + cpu;
+      void big.offsetWidth;
+      big.classList.add('show','keep');
+      if(myHand){
+        var r = judge(myHand, cpu);
+        big.className = 'big show keep ' + r.cls;
+        note.textContent = '내 선택 ' + EMOJI[myHand] + ' ' + myHand + ' · 룰렛 ' + EMOJI[cpu] + ' ' + cpu + ' → ' + r.text;
+      }else{
+        big.className = 'big show keep';
+        note.textContent = round + '번째 · 룰렛이 고른 손은 ' + cpu + ' 입니다';
+      }
+    }, 3480);
+  }
+
+  btn.addEventListener('click', spin);
+})();
+</script>
+</body>
+</html>
